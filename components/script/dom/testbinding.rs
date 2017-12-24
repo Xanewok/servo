@@ -449,6 +449,10 @@ impl TestBindingMethods for TestBinding {
     fn PassCallbackFunction(&self, _: Rc<Function>) {}
     fn PassCallbackInterface(&self, _: Rc<EventListener>) {}
     fn PassSequence(&self, _: Vec<i32>) {}
+    #[allow(unsafe_code)]
+    unsafe fn PassAnySequence(&self, _: *mut JSContext, _: Vec<HandleValue>) {}
+    //#[allow(unsafe_code)]
+    //unsafe fn PassObjectSequence(&self, cx: *mut JSContext, seq: Vec<*mut JSObject>) {}
     fn PassStringSequence(&self, _: Vec<DOMString>) {}
     fn PassInterfaceSequence(&self, _: Vec<DomRoot<Blob>>) {}
 

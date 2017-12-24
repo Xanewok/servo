@@ -717,6 +717,10 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
                         "    _ => { %s },\n"
                         "}" % (config, indent(failOrPropagate, 8), exceptionCode))
 
+        # Currenly only for sequence<{any, object}> or similar
+        # if type.isSequence() and type_needs_tracing(innerContainerType(type)):
+        #     templateBody = "auto_root!(%s)" % templateBody
+
         return handleOptional(templateBody, declType, handleDefaultNull("None"))
 
     if type.isUnion():
@@ -1260,8 +1264,15 @@ class CGArgumentConverter(CGThing):
             else:
                 assert not default
 
+            arg = "arg%d" % index
             self.converter = instantiateJSToNativeConversionTemplate(
-                template, replacementVariables, declType, "arg%d" % index)
+                template, replacementVariables, declType, arg)
+
+            # TODO: Only for sequence<{any,object}> now
+            if argument.type.isSequence() and typeNeedsCx(innerContainerType(argument.type)):
+                self.converter.append(CGGeneric("auto_root!(in(cx) let %s = %s);" % (arg, arg)))
+                self.converter.append(CGGeneric("let %s = %s.clone();" % (arg, arg)))
+
         else:
             assert argument.optional
             variadicConversion = {
