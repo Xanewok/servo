@@ -38,6 +38,7 @@ use dom_struct::dom_struct;
 use js::jsapi::{HandleObject, HandleValue, Heap, JSContext, JSObject};
 use js::jsapi::{JS_NewPlainObject, JS_NewUint8ClampedArray};
 use js::jsval::{JSVal, NullValue};
+use js::rust::CustomAutoRooterGuard;
 use script_traits::MsDuration;
 use servo_config::prefs::PREFS;
 use std::borrow::ToOwned;
@@ -450,9 +451,9 @@ impl TestBindingMethods for TestBinding {
     fn PassCallbackInterface(&self, _: Rc<EventListener>) {}
     fn PassSequence(&self, _: Vec<i32>) {}
     #[allow(unsafe_code)]
-    unsafe fn PassAnySequence(&self, _: *mut JSContext, _: Vec<HandleValue>) {}
-    //#[allow(unsafe_code)]
-    //unsafe fn PassObjectSequence(&self, cx: *mut JSContext, seq: Vec<*mut JSObject>) {}
+    unsafe fn PassAnySequence(&self, _: *mut JSContext, _: CustomAutoRooterGuard<Vec<JSVal>>) {}
+    #[allow(unsafe_code)]
+    unsafe fn PassObjectSequence(&self, _: *mut JSContext, _: CustomAutoRooterGuard<Vec<*mut JSObject>>) {}
     fn PassStringSequence(&self, _: Vec<DOMString>) {}
     fn PassInterfaceSequence(&self, _: Vec<DomRoot<Blob>>) {}
 
