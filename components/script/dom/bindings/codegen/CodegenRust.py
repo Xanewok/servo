@@ -563,7 +563,6 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
                                 isMember=False,
                                 isArgument=False,
                                 isAutoRooted=False,
-                                needsRootingInto=False,
                                 invalidEnumValueFatal=True,
                                 defaultValue=None,
                                 treatNullAs="Default",
@@ -872,9 +871,6 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         return handleOptional(templateBody, declType, handleDefaultNull("None"))
 
     if type.isTypedArray() or type.isArrayBuffer() or type.isArrayBufferView() or type.isSharedArrayBuffer():
-        # Typed arrays can be constructed only with a prior rooted value
-        assert isArgument or isinstance(needsRootingInto, basestring)
-
         if failureCode is None:
             substitutions = {
                 "sourceDescription": sourceDescription,
@@ -888,8 +884,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
 
         templateBody = fill(
             """
-            match typedarray::${ty}::from(cx, &mut ${stackRootName},
-                $${val}.get().to_object()) {
+            match typedarray::${ty}::from($${val}.get().to_object()) {
                 Ok(val) => val,
                 Err(()) => {
                     $*{failureCode}
@@ -897,7 +892,6 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
             }
             """,
             ty=type.name,
-            stackRootName=needsRootingInto,
             failureCode=unwrapFailureCode + "\n",
         )
 
@@ -1286,7 +1280,6 @@ class CGArgumentConverter(CGThing):
             isClamp=argument.clamp,
             isMember="Variadic" if argument.variadic else False,
             isAutoRooted=type_needs_auto_root(argument.type),
-            needsRootingInto="arg_root" if type_conversion_needs_root(argument.type) else False,
             allowTreatNonObjectAsNull=argument.allowTreatNonCallableAsNull())
         template = info.template
         default = info.default
@@ -1313,9 +1306,6 @@ class CGArgumentConverter(CGThing):
 
             converter = [instantiateJSToNativeConversionTemplate(
                 template, replacementVariables, declType, arg)]
-
-            if type_conversion_needs_root(argument.type):
-                converter.insert(0, CGGeneric("let mut arg_root = Rooted::new_unrooted();"))
 
             # The auto rooting is done only after the conversion is performed
             if type_needs_auto_root(argument.type):
@@ -6485,12 +6475,6 @@ def type_needs_tracing(t):
         return False
 
     assert False, (t, type(t))
-
-
-def type_conversion_needs_root(t):
-    assert isinstance(t, IDLType)
-
-    return t.isSpiderMonkeyInterface()
 
 
 def type_needs_auto_root(t):

@@ -658,6 +658,14 @@ unsafe impl JSTraceable for StyleLocked<MediaList> {
     }
 }
 
+use js::typedarray::TypedArray;
+use js::typedarray::TypedArrayElement;
+unsafe impl<T> JSTraceable for TypedArray<T, Box<Heap<*mut JSObject>>> where T: TypedArrayElement {
+    unsafe fn trace(&self, trc: *mut JSTracer) {
+        self.object.trace(trc);
+    }
+}
+
 unsafe impl<S> JSTraceable for DocumentStylesheetSet<S>
 where
     S: JSTraceable + ::style::stylesheets::StylesheetInDocument + PartialEq + 'static,
