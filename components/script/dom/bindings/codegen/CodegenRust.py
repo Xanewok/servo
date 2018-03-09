@@ -6487,6 +6487,9 @@ def type_needs_auto_root(t):
     if t.isType():
         if t.isSequence() and (t.inner.isAny() or t.inner.isObject()):
             return True
+    # SpiderMonkey interfaces
+    if t.isTypedArray() or t.isArrayBuffer() or t.isArrayBufferView() or t.isSharedArrayBuffer():
+        return True
 
     return False
 
