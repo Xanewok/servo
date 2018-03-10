@@ -4340,11 +4340,13 @@ class CGUnionConversionStruct(CGThing):
         else:
             mozMapObject = None
 
-        hasObjectTypes = interfaceObject or arrayObject or dateObject or object or mozMapObject
+        hasObjectTypes = object or interfaceObject or arrayObject or dateObject or mozMapObject
         if hasObjectTypes:
             # "object" is not distinguishable from other types
             assert not object or not (interfaceObject or arrayObject or dateObject or callbackObject or mozMapObject)
             templateBody = CGList([], "\n")
+            if object:
+                templateBody.append(object)
             if interfaceObject:
                 templateBody.append(interfaceObject)
             if arrayObject:
