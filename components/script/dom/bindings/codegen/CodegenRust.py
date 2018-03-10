@@ -882,6 +882,10 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         else:
             unwrapFailureCode = failureCode
 
+        typeName = type.name
+        if isMember == "Union":
+            typeName = "Heap" + typeName
+
         templateBody = fill(
             """
             match typedarray::${ty}::from($${val}.get().to_object()) {
@@ -891,14 +895,18 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
                 }
             }
             """,
-            ty=type.name,
+            ty=typeName,
             failureCode=unwrapFailureCode + "\n",
         )
+
+        if isMember == "Union":
+            templateBody = "RootedTraceableBox::new(%s)" % templateBody
 
         declType = CGGeneric("typedarray::%s" % type.name)
         if type.nullable():
             templateBody = "Some(%s)" % templateBody
             declType = CGWrapper(declType, pre="Option<", post=">")
+
 
         # if type_needs_tracing(type):
         #     declType = CGTemplatedType("RootedTraceableBox", declType)
