@@ -907,10 +907,6 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
             templateBody = "Some(%s)" % templateBody
             declType = CGWrapper(declType, pre="Option<", post=">")
 
-
-        # if type_needs_tracing(type):
-        #     declType = CGTemplatedType("RootedTraceableBox", declType)
-
         templateBody = wrapObjectTemplate(templateBody, "None",
                                           isDefinitelyObject, type, failureCode)
 
@@ -4421,11 +4417,6 @@ class CGUnionConversionStruct(CGThing):
             actualType = "RootedTraceableBox<%s>" % actualType
         returnType = "Result<Option<%s>, ()>" % actualType
         jsConversion = templateVars["jsConversion"]
-
-        # Any code to convert to Object is unused, since we're already converting
-        # from an Object value.
-        #if t.name == 'Object':
-        #    return CGGeneric('')
 
         return CGWrapper(
             CGIndenter(jsConversion, 4),
