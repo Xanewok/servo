@@ -249,6 +249,7 @@ interface TestBinding {
   void passTypedArray(Int8Array arg);
   void passTypedArray2(ArrayBuffer arg);
   void passTypedArray3(ArrayBufferView arg);
+  void passTypedArrayUnion((ArrayBuffer or ArrayBufferView) arg);
   void passUnion((HTMLElement or long) arg);
   void passUnion2((Event or DOMString) data);
   void passUnion3((Blob or DOMString) data);

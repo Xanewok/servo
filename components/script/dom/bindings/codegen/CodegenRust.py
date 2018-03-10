@@ -900,6 +900,9 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
             templateBody = "Some(%s)" % templateBody
             declType = CGWrapper(declType, pre="Option<", post=">")
 
+        # if type_needs_tracing(type):
+        #     declType = CGTemplatedType("RootedTraceableBox", declType)
+
         templateBody = wrapObjectTemplate(templateBody, "None",
                                           isDefinitelyObject, type, failureCode)
 
@@ -1110,19 +1113,24 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     if type.isObject():
         assert not isEnforceRange and not isClamp
 
-        # TODO: Need to root somehow
-        # https://github.com/servo/servo/issues/6382
+        templateBody = "${val}.get().to_object()"
         default = "ptr::null_mut()"
-        templateBody = wrapObjectTemplate("${val}.get().to_object()",
-                                          default,
-                                          isDefinitelyObject, type, failureCode)
 
-        if isMember in ("Dictionary", "Union"):
+        # TODO: Verify if we can pull it's needed for dictionaries
+        #if isMember in ("Dictionary", "Union"):
+        if isMember == "Union":
+            templateBody = "RootedTraceableBox::from_box(Heap::boxed(%s))" % templateBody
+            default = "RootedTraceableBox::new(Heap::default())"# % default
+            declType = CGGeneric("RootedTraceableBox<Heap<*mut JSObject>>")
+        elif isMember == "Dictionary":
             declType = CGGeneric("Heap<*mut JSObject>")
         else:
             # TODO: Need to root somehow
             # https://github.com/servo/servo/issues/6382
             declType = CGGeneric("*mut JSObject")
+
+        templateBody = wrapObjectTemplate(templateBody, default,
+                                          isDefinitelyObject, type, failureCode)
 
         return handleOptional(templateBody, declType,
                               handleDefaultNull(default))
@@ -2320,6 +2328,7 @@ def UnionTypes(descriptors, dictionaries, callbacks, typedefs, config):
         'js::jsapi::JSObject',
         'js::jsapi::MutableHandleValue',
         'js::jsval::JSVal',
+        'js::typedarray'
     ]
 
     # Now find all the things we'll need as arguments and return values because
@@ -4171,6 +4180,9 @@ def getUnionTypeTemplateVars(type, descriptorProvider):
     elif type.isObject():
         name = type.name
         typeName = "Heap<*mut JSObject>"
+    elif type.isTypedArray() or type.isArrayBuffer() or type.isArrayBufferView() or type.isSharedArrayBuffer():
+        name = type.name
+        typeName = "typedarray::Heap" + name
     else:
         raise TypeError("Can't handle %s in unions yet" % type)
 
@@ -4402,8 +4414,8 @@ class CGUnionConversionStruct(CGThing):
 
         # Any code to convert to Object is unused, since we're already converting
         # from an Object value.
-        if t.name == 'Object':
-            return CGGeneric('')
+        #if t.name == 'Object':
+        #    return CGGeneric('')
 
         return CGWrapper(
             CGIndenter(jsConversion, 4),
@@ -6457,6 +6469,9 @@ def type_needs_tracing(t):
         if t.isUnion():
             return any(type_needs_tracing(member) for member in t.flatMemberTypes)
 
+        if t.isTypedArray() or t.isArrayBuffer() or t.isArrayBufferView() or t.isSharedArrayBuffer():
+            return True
+
         return False
 
     if t.isDictionary():
@@ -6487,9 +6502,9 @@ def type_needs_auto_root(t):
     if t.isType():
         if t.isSequence() and (t.inner.isAny() or t.inner.isObject()):
             return True
-    # SpiderMonkey interfaces
-    if t.isTypedArray() or t.isArrayBuffer() or t.isArrayBufferView() or t.isSharedArrayBuffer():
-        return True
+        # SpiderMonkey interfaces
+        if t.isTypedArray() or t.isArrayBuffer() or t.isArrayBufferView() or t.isSharedArrayBuffer():
+            return True
 
     return False
 
